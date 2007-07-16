@@ -91,7 +91,7 @@ $(MAN7PAGES):
 
 %.html: %
 	$(MAN2HTML) $< >$@
-	sed -i -e '/^Content-type: /d' -e '/^Time: /d' -e '/index\.html/d' \
+	sed -i -e '/^Content-type: /d' -e '/^Time: /d' -e '/index\.html/d' -e '2 d' \
 		-e 's|HREF="\.\./man./gear|HREF="gear|g' \
 		-e 's|<A HREF="\.\./man./[^/]\+\.html">\([^<]\+\)</A>|\1|g' \
 		-e 's|<A HREF="mailto:[^"]\+">\([^@<]\+@[^<]\+\)</A>|\1|' \
