@@ -73,7 +73,7 @@ CHMOD = chmod
 
 .PHONY:	all install clean
 
-all: $(TARGETS)
+all: $(TARGETS) html
 
 $(MAN1PAGES): gear-sh-functions
 

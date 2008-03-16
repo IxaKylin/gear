@@ -1,0 +1,114 @@
+<HTML><HEAD><TITLE>Manpage of GEAR\-CHANGELOG</TITLE>
+</HEAD><BODY>
+<H1>GEAR\-CHANGELOG</H1>
+Section: User Commands (1)<BR>Updated: August 2008<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+gear-changelog - generate changelog entry from git commit logs
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>gear-changelog</B>
+
+[<I>options</I>] [<I>&lt;since&gt;</I>]
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The utility filters and formats git commit messages according to
+rules file present in git repository.
+<P>
+If
+<I>&lt;since&gt;</I>
+
+is specified, then
+<B>gear-changelog</B>
+
+shows only commits between
+<I>&lt;since&gt;</I>
+
+and HEAD. Otherwise, last named commit used.
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<P>
+<DL COMPACT>
+<DT><B>--no-rules</B><DD>
+do not use rules at all, changelog entries will be
+written without aggregation (grouping, filtering, etc);
+<DT><B>--no-groups</B><DD>
+do not group entries as described in a rules file;
+<DT><B>--no-specfile</B><DD>
+do not use information from specfile;
+<DT><B>-f</B>, <B>--format</B>=<I>TYPE</I><DD>
+specify source type: 'deb', 'rpm' or 'gnu',
+default is 'rpm';
+<DT><B>-r</B>, <B>--rules</B>=<I>RULES</I><DD>
+name of a rules file, default is .gear/changelog;
+<DT><B>-V</B>, <B>--version</B><DD>
+print program version and exit;
+<DT><B>-h</B>, <B>--help</B><DD>
+show this text and exit.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>ENVIRONMENT</H2>
+
+<DL COMPACT>
+<DT><B>RULES</B>
+
+<DD>
+Specifies a gear rules filename.
+<DT><B>GIT_AUTHOR_NAME</B>
+
+<DD>
+Specifies a committer name.
+<DT><B>GIT_AUTHOR_EMAIL</B>
+
+<DD>
+Specifies a committer email.
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+Written by Alexey Gladkov &lt;legion@altlinux&gt;
+<A NAME="lbAH">&nbsp;</A>
+<H2>REPORTING BUGS</H2>
+
+Report bugs to <A HREF="http://bugzilla.altlinux.org/">http://bugzilla.altlinux.org/</A>
+<A NAME="lbAI">&nbsp;</A>
+<H2>COPYRIGHT</H2>
+
+Copyright &#169; 2008  Alexey Gladkov &lt;legion@altlinux&gt;
+<BR>
+
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+<A NAME="lbAJ">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<B><A HREF="gear.1.html">gear</A></B>(1),
+
+<B><A HREF="gear-changelog-rules.5.html">gear-changelog-rules</A></B>(5).
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">ENVIRONMENT</A><DD>
+<DT><A HREF="#lbAG">AUTHOR</A><DD>
+<DT><A HREF="#lbAH">REPORTING BUGS</A><DD>
+<DT><A HREF="#lbAI">COPYRIGHT</A><DD>
+<DT><A HREF="#lbAJ">SEE ALSO</A><DD>
+</DL>
+<HR>
+This document was created by
+man2html
+using the manual pages.<BR>
+</BODY>
+</HTML>

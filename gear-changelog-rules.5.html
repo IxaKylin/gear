@@ -1,0 +1,158 @@
+<HTML><HEAD><TITLE>Manpage of GEAR-CHNAGELOG-RULES</TITLE>
+</HEAD><BODY>
+<H1>GEAR-CHNAGELOG-RULES</H1>
+Section: File Formats (5)<BR>Updated: Mar 2008<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+gear-changelog-rules - rule file for gear-changelog
+<A NAME="lbAC">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The rule file specifies actions of
+<B><A HREF="gear-changelog.1.html">gear-changelog</A></B>(1)
+
+required to filter and format got commit messages.  There are two types of
+directives: global and sectional.  Global directives should be defined before
+any sections.
+<A NAME="lbAD">&nbsp;</A>
+<H2>FORMAT</H2>
+
+A rule file consists of lines of the following format:
+<DL COMPACT><DT><DD>
+<P>
+
+<I>directive</I><B>:</B>
+
+<I>&lt;value&gt;</I>
+
+</DL>
+
+<P>
+
+Empty lines and lines beginning with ``#'' are ignored.
+Directive arguments are delimited by whitespace characters.
+<A NAME="lbAE">&nbsp;</A>
+<H2>GLOBAL DIRECTIVES</H2>
+
+<DL COMPACT>
+<DT><B>width: &lt;number&gt;</B>
+
+<DD>
+Set width of changelog messages.  Default is 70 symbols.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>SECTION DIRECTIVES</H2>
+
+<DL COMPACT>
+<DT><B>group: &lt;TEXT&gt;</B>
+
+<DD>
+This directive begins a new section.  It should contain a description for this group.
+This description will be used as a group message in the changelog.
+<DT><B>regexp: &lt;PATTERN&gt;</B>
+
+<DD>
+Specifies the
+<I>&lt;PATTERN&gt;</I>
+
+on which a commit message can be attributed to this group.
+You can specify more than one directive of this kind.
+<DT><B>filter: &lt;SED-COMMAND&gt;</B>
+
+<DD>
+Specify commands for
+<B>sed(1)</B>
+
+utility to transform each commit message before it will be written into
+changelog.  You can specify more than one directive of this kind.
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H2>FILES</H2>
+
+<DL COMPACT>
+<DT><B>.gear/changelog</B>
+
+<DD>
+The
+<B><A HREF="gear-changelog.1.html">gear-changelog</A></B>(1)
+
+expect to find rules, unless another name is specified by the
+<B>--rules=</B><I>filename</I>
+
+option.
+</DL>
+<A NAME="lbAH">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<PRE>
+[localhost]$ cat .gear/changelog &lt;&lt;EOF
+group: gear-changelog utility changes
+regexp: ^gear-changelog(-rules.5.in)?: 
+filter: s/^gear-changelog: //
+filter: s/^gear-changelog-rules.5.in: /Documentation: /
+
+group: gear-merge utility changes
+regexp: ^gear-merge:
+filter: s/^gear-merge: //
+EOF
+
+[localhost]$ gear-changelog
+* Wed Jun 18 2008 Alexey Gladkov &lt;legion@altlinux&gt; 1.4.0-alt1
+- gear-changelog utility changes:
+  + Replace /bin/ash with /bin/sh.
+  + Documentation: Fix typo.
+  + Read first commit too.
+  + Fix typo.
+- gear-merge utility changes:
+  + Fix spacing in help message.
+  + Update copyrights.
+  + More choices in interactive merge mode (thx Alexey I. Froloff).
+  + Document --no-interactive option (thx Alexey I. Froloff).
+  + Implement --stop option (thx Alexey I. Froloff).
+</PRE>
+
+<A NAME="lbAI">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+<P>
+
+This manual page written by Alexey Gladkov  &lt;legion@altlinux&gt;.
+<P>
+
+Authors and contributors of the programs included in the
+<B>gear</B>
+
+package are listed in the manual pages for these programs.
+<A NAME="lbAJ">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<P>
+
+
+
+
+<B><A HREF="gear-changelog.1.html">gear-changelog</A></B>(1).
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAD">FORMAT</A><DD>
+<DT><A HREF="#lbAE">GLOBAL DIRECTIVES</A><DD>
+<DT><A HREF="#lbAF">SECTION DIRECTIVES</A><DD>
+<DT><A HREF="#lbAG">FILES</A><DD>
+<DT><A HREF="#lbAH">EXAMPLES</A><DD>
+<DT><A HREF="#lbAI">AUTHOR</A><DD>
+<DT><A HREF="#lbAJ">SEE ALSO</A><DD>
+</DL>
+<HR>
+This document was created by
+man2html
+using the manual pages.<BR>
+</BODY>
+</HTML>

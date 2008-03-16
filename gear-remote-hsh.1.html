@@ -1,0 +1,97 @@
+<HTML><HEAD><TITLE>Manpage of GEAR\-REMOTE\-HSH</TITLE>
+</HEAD><BODY>
+<H1>GEAR\-REMOTE\-HSH</H1>
+Section: User Commands (1)<BR>Updated: August 2008<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+gear-remote-hsh - run hsh on the remote host
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>gear-remote-hsh</B>
+
+[<I>options</I>] [<I>hsh options</I>] [<I>&lt;user&gt;@</I>]<I>&lt;hostname&gt; &lt;workdir&gt;</I>
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+&lt;hostname&gt; - remote build host;
+<P>
+
+&lt;workdir&gt;  - working directory onto &lt;hostname&gt;.
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<DL COMPACT>
+<DT><B>--build-only</B><DD>
+do not download results onto current host;
+<DT><B>--cleanup-repo</B><DD>
+cleanup hasher workdir on remote host;
+<DT><B>--commit</B><DD>
+make temporary commit prior to extract;
+<DT><B>--target</B>=<I>ARCH</I><DD>
+target architecture;
+<DT><B>-m</B>, <B>--method</B>=<I>TYPE</I><DD>
+defines build method on the remote host (default: gear);
+<DT><B>-o</B>, <B>--outdir</B>=<I>OUTDIR</I><DD>
+download results in DIR on local machine;
+<DT><B>-r</B>, <B>--rules</B>=<I>FILE</I><DD>
+override rules file name;
+<DT><B>-t</B>, <B>--tree-ish</B>=<I>ID</I><DD>
+COMMIT[:PATH] specifying the tree to process;
+<DT><B>-v</B>, <B>--verbose</B><DD>
+print a message for each action;
+<DT><B>-V</B>,--version<DD>
+print program version and exit;
+<DT><B>-h</B>,--help<DD>
+show this text and exit.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+Written by Alexey Gladkov &lt;legion@altlinux&gt;
+<A NAME="lbAG">&nbsp;</A>
+<H2>REPORTING BUGS</H2>
+
+Report bugs to <A HREF="http://bugzilla.altlinux.org/">http://bugzilla.altlinux.org/</A>
+<A NAME="lbAH">&nbsp;</A>
+<H2>COPYRIGHT</H2>
+
+Copyright &#169; 2007-2008  Alexey Gladkov &lt;legion@altlinux&gt;
+<BR>
+
+Copyright &#169; 2007  Sir Raorn &lt;raorn@altlinux&gt;
+<BR>
+
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+<A NAME="lbAI">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<B><A HREF="gear.1.html">gear</A></B>(1),
+
+<B>hsh</B>(1),
+
+<B>hasher</B>(7)
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">AUTHOR</A><DD>
+<DT><A HREF="#lbAG">REPORTING BUGS</A><DD>
+<DT><A HREF="#lbAH">COPYRIGHT</A><DD>
+<DT><A HREF="#lbAI">SEE ALSO</A><DD>
+</DL>
+<HR>
+This document was created by
+man2html
+using the manual pages.<BR>
+</BODY>
+</HTML>

@@ -1,0 +1,745 @@
+<HTML><HEAD><TITLE>Manpage of GEAR-RULES</TITLE>
+</HEAD><BODY>
+<H1>GEAR-RULES</H1>
+Section: File Formats (5)<BR>Updated: March 2007<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+gear-rules - rule file for gear
+<A NAME="lbAC">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The rule file specifies actions of
+<B><A HREF="gear.1.html">gear</A></B>(1)
+
+required to extract source files from the package repository.
+<A NAME="lbAD">&nbsp;</A>
+<H2>FORMAT</H2>
+
+A rule file consists of 0 or more lines of the following format:
+<DL COMPACT><DT><DD>
+<P>
+
+<I>directive</I><B>:</B>
+
+<I>arguments</I>...
+
+</DL>
+
+<P>
+
+Empty lines and lines beginning with ``#'' are ignored.
+Directive arguments are delimited by whitespace characters.
+Whitespaces between the directive name and ``:'' are optional;
+whitespaces between ``:'' and the first argument are also optional.
+There is no support for line continuation and quoting of special
+characters.
+<A NAME="lbAE">&nbsp;</A>
+<H2>PATHS</H2>
+
+Unless specified otherwise, all paths used in the rule file are
+relative to the
+<I>main tree,</I>
+
+which is a subtree of the
+<I>main commit</I>
+
+specified by the
+<B>-t</B>
+
+option to
+<B><A HREF="gear.1.html">gear</A></B>(1).
+
+Paths are not allowed to contain ``..'', and therefore can refer
+only to objects inside the main tree.
+<P>
+
+However, some directives can accept a
+<I>tree_path</I>,
+
+which can be either a plain path relative to the main tree, or a path
+with an explicit base tree specification:
+<DL COMPACT><DT><DD>
+<P>
+
+<I>base_tree</I><B>:</B><I>path_in_tree</I>
+
+</DL>
+
+<P>
+
+The
+<I>base_tree</I>
+
+part can be in one of the following forms:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT>-<DD>
+A single period character ``.'' specifies the main tree.
+In most cases just omitting the ``<I>base_tree</I><B>:</B>'' part
+gives the same effect; adding ``.:'' explicitly is required only
+if the
+<I>path_in_tree</I>
+
+part itself contains the ``:'' character.
+<DT>-<DD>
+A full
+<FONT SIZE="-1">SHA-1</FONT>
+object name of a commit (40 hex characters) specifies the root tree of
+that commit.
+The specified commit must be an ancestor of the main commit.
+<DT>-<DD>
+A name of a tag listed in the tag list specifies the root tree of the
+commit pointed to by the specified tag (directly or indirectly through
+a chain of tag objects).
+The specified commit must be an ancestor of the main commit, and all
+tag objects in the chain must be stored in the tag directory.
+</DL>
+</DL>
+
+<P>
+
+The restrictions on references to other commits ensure that a correct
+git repository which contains the main commit also contains everything
+which is required to extract source files from the repository.
+<A NAME="lbAF">&nbsp;</A>
+<H2>KEYWORDS</H2>
+
+Arguments of some directives can contain keywords in the
+<B>@</B><I>keyword</I><B>@</B>
+
+format, which are replaced by real values before use.
+Values for keywords can be obtained from the main spec file or from
+other arguments of the same directive.
+<P>
+
+The following keywords are available in all directives which perform
+keyword replacement:
+<DL COMPACT>
+<DT><B>@name@</B>
+
+<DD>
+Package name extracted from spec file.
+<DT><B>@version@</B>
+
+<DD>
+Package version extracted from spec file.
+<DT><B>@release@</B>
+
+<DD>
+Package release extracted from spec file.
+</DL>
+<P>
+
+Other keywords are specific to each directive.
+<A NAME="lbAG">&nbsp;</A>
+<H2>DIRECTIVES</H2>
+
+<DL COMPACT>
+<DT><B>spec: </B><I>path_to_file</I>
+
+<DD>
+Specify path of the main spec file within the main tree.
+This directive may be omitted if the main spec file is the only file in
+the main tree which matches the
+<B>*.spec</B>
+
+glob pattern; in this case
+<B><A HREF="gear.1.html">gear</A></B>(1)
+
+can find the spec file automatically.
+<DT><B>tags: </B><I>path_to_directory</I>
+
+<DD>
+Specify another path of the directory with the list of named tags and
+stored tag objects instead of
+<B>.gear-tags</B> and <B>.gear/tags</B>.
+
+<DT><B>copy: </B><I>glob_pattern</I>...
+
+<DD>
+Copy files matching the specified glob patterns to the output
+directory, except files which match any of glob patterns specified by
+<B>exclude</B>
+
+directives.
+Every
+<I>glob_pattern</I>
+
+must match at least one file in the main tree.
+<DT><DD>
+Glob patterns specified in this directive may contain multiple directory
+components separated by ``/''.
+Wildcards are interpreted only in the last component of the pattern.
+<DT><B>gzip: </B><I>glob_pattern</I>...
+
+<DD>
+
+<DT><B>bzip2: </B><I>glob_pattern</I>...
+
+<DD>
+
+Like
+<B>copy</B>,
+
+but additionally compress the copied files with
+<B>gzip</B>(1)
+
+or
+<B>bzip2</B>(1)
+
+and add the appropriate suffix to the copied file name.
+<DT><B>compress: </B><I></I>type=<I>TYPE</I><B>&nbsp;</B>[name=<I>NAME</I>]&nbsp;[<I>options</I>]&nbsp;--&nbsp;<I>glob_pattern</I>...
+
+<DD>
+Like
+<B>copy</B>,
+
+but can additionally compress the copied files with
+<I>TYPE</I>
+
+method.
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>type=</B><I>TYPE</I>
+
+<DD>
+Specify compression method.
+Supported values are: copy, bzip2, gzip, lzma and zip.
+<DT><B>name=</B><I>&lt;NAME&gt;</I>
+
+<DD>
+Specify destination file name in output directory. In this case
+<I>glob_pattern</I>
+
+should match only one file.
+</DL>
+</DL>
+
+<DT><DD>
+All methods except copy accept compress options.
+<DT><B>copy?: </B><I>glob_pattern</I>...
+
+<DD>
+
+<DT><B>gzip?: </B><I>glob_pattern</I>...
+
+<DD>
+<DT><B>bzip2?: </B><I>glob_pattern</I>...
+
+<DD>
+<DT><B>compress?: </B><I></I>type=<I>TYPE</I><B>&nbsp;</B>[name=<I>NAME</I>]&nbsp;[<I>options</I>]&nbsp;--&nbsp;<I>glob_pattern</I>...
+
+<DD>
+
+Like the corresponding directives without ``?'', but unmatched
+patterns are ignored instead of causing errors.
+<DT><B>exclude: </B><I>glob_pattern</I>...
+
+<DD>
+Ignore files matching the specified glob patterns in all
+<B>copy</B>-like
+
+directives.
+Affects all directives in the rule file irrespective of the order.
+Specifying a glob pattern which does not match any files in the tree
+is not an error.
+<DT><DD>
+When copying files from subdirectories of the main tree, the whole path
+including the subdirectory name is matched against exclude patterns.
+The ``/'' characters in the path are not treated as special and
+can be matched by wildcards.
+<DT><B>tar: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+Create a
+<B>tar</B>(1)
+
+archive of the tree specified by
+<I>tree_path</I>.
+
+The specified tree must exist.
+<DT><DD>
+Valid options are:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>spec=</B><I>path_to_file</I>
+
+<DD>
+Use another file instead of the main spec file to define keyword values.
+<DT><B>name=</B><I>archive_name</I>
+
+<DD>
+Set name of the tar archive.
+The
+<B>.tar</B>
+
+suffix is added automatically unless another suffix is specified by
+the
+<B>suffix</B>
+
+option.
+<DT><DD>
+The default value of this option is
+<B>@dir@-@version@</B>,
+
+unless the
+path part of
+<I>tree_path</I>
+
+is ``.'', in which case the default is
+<B>@name@-@version@</B>.
+
+<DT><B>base=</B><I>base_name</I>
+
+<DD>
+Add
+<I>base_name</I>
+
+as a leading path to all files in the generated archive.
+If this option is not specified, by default the archive name without
+the suffix (set by the
+<B>name</B>
+
+option) is used.
+<DT><B>suffix=</B><I>suffix</I>
+
+<DD>
+Add
+<I>suffix</I>
+
+to the archive file name instead of the default
+<B>.tar</B>
+
+suffix.
+</DL>
+</DL>
+
+<DT><DD>
+Values of the
+<B>name</B>
+
+and
+<B>base</B>
+
+options and
+<I>tree_path</I>
+
+can contain keywords.
+In addition to the common keywords, the following keyword is supported:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>@dir@</B>
+
+<DD>
+Expands to
+basename(path(<I>tree_path</I>)).
+
+Not allowed when
+path(<I>tree_path</I>)
+
+is ``.'' and must not be used in the path part of
+<I>tree_path</I>.
+
+</DL>
+</DL>
+
+<DT><B>tar.gz: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+
+<DT><B>tar.bz2: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+
+Like
+<B>tar</B>,
+
+but additionally compress the generated tar archive with
+<B>gzip</B>(1)
+
+or
+<B>bzip2</B>(1)
+
+and add the appropriate suffix to the archive file name (unless the
+<B>suffix</B>
+
+option is specified, which overrides both the
+<B>.tar</B>
+
+part and the suffix for the compression method).
+<DT><B>zip: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+Like
+<B>tar</B>,
+
+but create a
+<B>zip</B>(1)
+
+archive instead of
+<B>tar</B>(1)
+
+and add the
+<B>.zip</B>
+
+suffix to the archive file name instead of
+<B>.tar</B>.
+
+<DT><B>tar?: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+
+<DT><B>tar.gz?: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+<DT><B>tar.bz2?: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+<DT><B>zip?: </B><I>tree_path </I><B></B>[<I>options</I><B></B>...]
+
+<DD>
+
+Like the corresponding directives without ``?'', but do not fail
+if the path specified in
+<I>tree_path</I>
+
+is not present in the tree.
+However, if
+<I>tree_path</I>
+
+specifies a non-default base tree, this tree still must be valid.
+<DT><B>diff: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+Create a diff in the unified format between trees specified by
+<I>old_tree_path</I>
+
+and
+<I>new_tree_path</I>.
+
+Both trees must exist.
+<DT><DD>
+Valid options are:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>spec=</B><I>path_to_file</I>
+
+<DD>
+Use another file instead of the main spec file to define keyword values.
+<DT><B>name=</B><I>diff_name</I>
+
+<DD>
+Set name of the generated diff file.
+The
+<B>.patch</B>
+
+suffix must be specified explicitly if required.
+<DT><DD>
+The default name is
+<B>@new_dir@-@version@-@release@.patch</B>,
+
+unless the path part of
+<I>new_tree_path</I>
+
+is ``.'', in which case the default is
+<B>@name@-@version@-@release@.patch</B>.
+
+</DL>
+</DL>
+
+<DT><DD>
+Value of the
+<B>name</B>
+
+option and the base tree components of
+<I>old_tree_path</I>
+
+and
+<I>new_tree_path</I>
+
+can contain keywords.
+In addition to the common keywords, the following keywords are
+supported:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>@old_dir@</B>
+
+<DD>
+Expands to
+basename(path(<I>old_tree_path</I>)).
+
+Not allowed when
+path(<I>old_tree_path</I>)
+
+is ``.''.
+<DT><B>@new_dir@</B>
+
+<DD>
+Expands to
+basename(path(<I>new_tree_path</I>)).
+
+Not allowed when
+path(<I>new_tree_path</I>)
+
+is ``.''.
+</DL>
+</DL>
+
+<DT><B>diff.gz: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+
+<DT><B>diff.bz2: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+
+Like
+<B>diff</B>,
+
+but additionally compress the generated diff file with
+<B>gzip</B>(1)
+
+or
+<B>bzip2</B>(1)
+
+and add the appropriate suffix to the diff file name.
+<DT><B>diff?: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+
+<DT><B>diff.gz?: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+<DT><B>diff.bz2?: </B><I>old_tree_path new_tree_path </I>[<I>options</I>...]
+
+<DD>
+
+Like the corresponding directives without ``?'', but do not fail
+if paths specified by
+<I>old_tree_path</I>
+
+or
+<I>new_tree_path</I>
+
+are not present in the tree.
+However, if
+<I>old_tree_path</I>
+
+or
+<I>new_tree_path</I>
+
+specify non-default base trees, these trees still must be valid.
+
+</DL>
+<P>
+
+
+
+<A NAME="lbAH">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<A NAME="lbAI">&nbsp;</A>
+<H3>Archive with modified sources</H3>
+
+A simple rule file can contain just a single
+<B>tar</B>
+
+directive to archive everything in the tree:
+<DL COMPACT><DT><DD>
+<P>
+
+
+<PRE>
+tar: .
+</PRE>
+
+
+</DL>
+
+<P>
+
+If the project has a separate upstream, adding
+<B>@release@</B>
+
+to the archive name is recommended to make the name different from
+upstream:
+<DL COMPACT><DT><DD>
+<P>
+
+
+<PRE>
+tar: . name=@name@-@version@-@release@
+</PRE>
+
+
+</DL>
+
+<A NAME="lbAJ">&nbsp;</A>
+<H3>Archive with unmodified sources and patch with local modifications</H3>
+
+If you prefer to create a tar archive with unmodified upstream sources
+and a separate patch with local modifications, you need to create a
+tag for the commit with upstream sources (or use the upstream tag if
+upstream also uses git), specify the tag name in the rule file and
+store this tag in the repository using
+<B><A HREF="gear-update-tag.1.html">gear-update-tag</A></B>(1).
+
+In this case the default archive name used by the
+<B>tar</B>
+
+directive should be correct, unless the package name or version format
+is different from upstream.
+<P>
+
+Usually the tag name can be based on the package version:
+<DL COMPACT><DT><DD>
+<P>
+
+
+<PRE>
+tar: v@version@:.
+diff: v@version@:. .
+</PRE>
+
+
+</DL>
+
+<P>
+
+(other tag naming conventions may be used, like
+<B>@name@-@version@</B>
+
+or plain
+<B>@version@</B>).
+
+However, if a prerelease version is packaged, parts like
+``preN'' or ``rcN'' should not be included in the package
+version, therefore the rule file will need some modifications for such
+versions.
+<A NAME="lbAK">&nbsp;</A>
+<H3>Archive with unmodified sources and separate patch files</H3>
+
+If you prefer to maintain patch files for local modifications instead
+of committing modified source files to the git repository, you can
+store unmodified upstream sources in a subdirectory of the main tree
+and put patch files directly into the main tree:
+<DL COMPACT><DT><DD>
+<P>
+
+
+<PRE>
+tar: <I>package_name</I>
+copy: *.patch
+</PRE>
+
+
+</DL>
+
+<P>
+
+This layout is used by
+<B><A HREF="gear-srpmimport.1.html">gear-srpmimport</A></B>(1).
+
+The
+<B><A HREF="gear-update.1.html">gear-update</A></B>(1)
+
+utility can be used to update sources stored in the git repository to
+a new upstream release.
+<P>
+
+If you don't like lots of patch files cluttering the main tree, you can
+move them into a subdirectory:
+<DL COMPACT><DT><DD>
+<P>
+
+
+<PRE>
+tar: <I>package_name</I>
+copy: patches/*.patch
+</PRE>
+
+
+</DL>
+
+<A NAME="lbAL">&nbsp;</A>
+<H2>FILES</H2>
+
+<DL COMPACT>
+<DT><B>.gear-rules</B>, <B>.gear/rules</B>
+
+<DD>
+The list of file names where
+<B><A HREF="gear.1.html">gear</A></B>(1),
+
+<B><A HREF="gear-commit.1.html">gear-commit</A></B>(1),
+
+<B><A HREF="gear-create-tag.1.html">gear-create-tag</A></B>(1),
+
+<B><A HREF="gear-srpmimport.1.html">gear-srpmimport</A></B>(1)
+
+and
+<B><A HREF="gear-update-tag.1.html">gear-update-tag</A></B>(1)
+
+expect to find rules (first non-empty file from this list is used),
+unless another name is specified by the
+<B>--rules=</B><I>filename</I>
+
+option.
+</DL>
+<A NAME="lbAM">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+<P>
+
+This manual page written by Sergey Vlasov &lt;vsu@altlinux&gt;.
+<P>
+
+Authors and contributors of the programs included in the
+<B>gear</B>
+
+package are listed in the manual pages for these programs.
+<A NAME="lbAN">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<P>
+
+
+
+
+<B><A HREF="gear.1.html">gear</A></B>(1),
+
+<B><A HREF="gear-srpmimport.1.html">gear-srpmimport</A></B>(1),
+
+<B><A HREF="gear-update.1.html">gear-update</A></B>(1),
+
+<B><A HREF="gear-update-tag.1.html">gear-update-tag</A></B>(1).
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAD">FORMAT</A><DD>
+<DT><A HREF="#lbAE">PATHS</A><DD>
+<DT><A HREF="#lbAF">KEYWORDS</A><DD>
+<DT><A HREF="#lbAG">DIRECTIVES</A><DD>
+<DT><A HREF="#lbAH">EXAMPLES</A><DD>
+<DL>
+<DT><A HREF="#lbAI">Archive with modified sources</A><DD>
+<DT><A HREF="#lbAJ">Archive with unmodified sources and patch with local modifications</A><DD>
+<DT><A HREF="#lbAK">Archive with unmodified sources and separate patch files</A><DD>
+</DL>
+<DT><A HREF="#lbAL">FILES</A><DD>
+<DT><A HREF="#lbAM">AUTHOR</A><DD>
+<DT><A HREF="#lbAN">SEE ALSO</A><DD>
+</DL>
+<HR>
+This document was created by
+man2html
+using the manual pages.<BR>
+</BODY>
+</HTML>

@@ -1,0 +1,160 @@
+<HTML><HEAD><TITLE>Manpage of GEAR-MERGE-RULES</TITLE>
+</HEAD><BODY>
+<H1>GEAR-MERGE-RULES</H1>
+Section: File Formats (5)<BR>Updated: November 2007<BR><A HREF="#index">Index</A>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+gear-merge-rules - rule file for gear-merge
+<A NAME="lbAC">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The rule file specifies actions of
+<B><A HREF="gear-merge.1.html">gear-merge</A></B>(1)
+
+required to merge branches in the package repository.
+<A NAME="lbAD">&nbsp;</A>
+<H2>FORMAT</H2>
+
+A rule file consists of lines of the following format:
+<DL COMPACT><DT><DD>
+<P>
+
+<I>directive</I><B>:</B>
+
+<I>&lt;from-branch&gt;</I>
+
+<I>&lt;to-branch&gt;</I>
+
+<I>[arguments&nbsp;...]</I>
+
+</DL>
+
+<P>
+
+Empty lines and lines beginning with ``#'' are ignored.
+Directive arguments are delimited by whitespace characters.
+<A NAME="lbAE">&nbsp;</A>
+<H2>COMMON ARGUMENTS</H2>
+
+<DL COMPACT>
+<DT><B>squash</B>
+
+<DD>
+It is the same as git merge --squash. See
+<B>git-merge</B>(1).
+
+<DT><B>strategy=</B><I>&lt;STRATEGY&gt;</I>
+
+<DD>
+It is the same as git merge --strategy=&lt;STRATEGY&gt;.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIRECTIVES</H2>
+
+<DL COMPACT>
+<DT><B>merge: &lt;from-branch&gt; &lt;to-branch&gt; [options&nbsp;...]</B>
+
+<DD>
+Call git-merge to merge the retrieved 
+<I>&lt;from-branch&gt;</I>
+
+into the
+<I>&lt;to-branch&gt;</I>
+
+branch.
+<DT><DD>
+Valid options are:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>message=</B><I>&lt;MESSAGE&gt;</I>
+
+<DD>
+The commit message to be used for the merge commit.
+</DL>
+</DL>
+
+<DT><B>gendiff: &lt;from-branch&gt; &lt;to-branch&gt; </B><I>name=&lt;FILENAME&gt; [options&nbsp;...]</I>
+
+<DD>
+<DT><DD>
+Valid options are:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>name=</B><I>&lt;FILENAME&gt;</I>
+
+<DD>
+Write result to file 
+<I>&lt;FILENAME&gt;.</I>
+
+<DT><B>message=</B><I>&lt;MESSAGE&gt;</I>
+
+<DD>
+The comment is added in the beginning of a diff.
+<DT><B>unified=</B><I>&lt;N&gt;</I>
+
+<DD>
+Generate diffs with &lt;n&gt; lines of context instead of the usual three. See
+<B>git-diff</B>(1).
+
+</DL>
+</DL>
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H2>FILES</H2>
+
+<DL COMPACT>
+<DT><B>.gear/merge</B>
+
+<DD>
+The
+<B><A HREF="gear-merge.1.html">gear-merge</A></B>(1)
+
+expect to find rules, unless another name is specified by the
+<B>--rules=</B><I>filename</I>
+
+option.
+</DL>
+<A NAME="lbAH">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+<P>
+
+This manual page written by Alexey Gladkov  &lt;legion@altlinux&gt;.
+<P>
+
+Authors and contributors of the programs included in the
+<B>gear</B>
+
+package are listed in the manual pages for these programs.
+<A NAME="lbAI">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<P>
+
+
+
+
+<B><A HREF="gear-merge.1.html">gear-merge</A></B>(1).
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAD">FORMAT</A><DD>
+<DT><A HREF="#lbAE">COMMON ARGUMENTS</A><DD>
+<DT><A HREF="#lbAF">DIRECTIVES</A><DD>
+<DT><A HREF="#lbAG">FILES</A><DD>
+<DT><A HREF="#lbAH">AUTHOR</A><DD>
+<DT><A HREF="#lbAI">SEE ALSO</A><DD>
+</DL>
+<HR>
+This document was created by
+man2html
+using the manual pages.<BR>
+</BODY>
+</HTML>
