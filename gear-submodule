@@ -1,0 +1,166 @@
+#!/bin/sh -efu
+
+. gear-sh-functions
+
+. shell-error
+. shell-args
+. shell-getopt
+
+show_help()
+{
+	cat <<-EOF
+	Usage: $PROG [options] init
+	   or: $PROG [options] update
+
+	Options:
+	  -f, --force        don't check untracked and modified files;
+	  -v, --verbose      print a message for each action;
+	  -V, --version      print program version and exit;
+	  -h, --help         show this text and exit.
+
+	Report bugs to http://bugzilla.altlinux.org/
+
+	EOF
+	exit
+}
+
+print_version()
+{
+	cat <<-EOF
+	$PROG version $PROG_VERSION
+	Written by Alexey Gladkov <legion@altlinux.org>
+
+	Copyright (C) 2010  Alexey Gladkov <legion@altlinux.org>
+	This is free software; see the source for copying conditions.  There is NO
+	warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	EOF
+	exit
+}
+
+
+submodule_remotes=
+workdir=
+exit_handler()
+{
+	local rc=$?
+	if [ "$rc" != 0 ]; then
+		for s in $submodule_remotes; do
+			git remote rm "$s"
+		done
+		git reset --hard HEAD
+	fi
+	[ ! -d "$workdir" ] ||
+		rm -rf -- "$workdir"
+
+	[ "$rc" == 0 ] ||
+		exit 1
+}
+
+TEMP=`getopt -n $PROG -o "f,h,v,V" -l "force,help,verbose,version" -- "$@"` ||
+	show_usage
+eval set -- "$TEMP"
+
+force=
+prefix=
+while :; do
+	case "$1" in
+		-f|--force) force=1
+			;;
+		-h|--help) show_help
+			;;
+		-V|--version) print_version
+			;;
+		-v|--verbose) verbose=-v
+			;;
+		--) shift; break
+			;;
+		*) fatal "Unrecognized option: $1"
+			;;
+	esac
+	shift
+done
+
+[ "$#" -gt 0 ] ||
+	show_usage "More arguments required"
+
+case "$1" in
+	init|update)
+		action="$1"; shift
+		;;
+	*)
+		show_usage "Unrecognized argument: $1"
+		;;
+esac
+
+
+chdir_to_toplevel
+
+if [ -z "$force" ]; then
+	out="$(git diff-index --cached --name-only HEAD)"
+	[ -z "$out" ] ||
+		fatal "Changed files found in the index."
+
+	out="$(git diff --name-only &&
+	       git ls-files --directory --others --exclude-per-directory=.gitignore)"
+	[ -z "$out" ] ||
+		fatal "Untracked or modified files found."
+fi
+
+trap exit_handler EXIT QUIT HUP INT TERM
+workdir="$(mktemp -dt "$PROG.XXXXXXXXX")"
+
+git cat-file -p HEAD:.gitmodules |
+	sed -n -e 's/\[submodule "\(.*\)"\]/\1/p' > "$workdir/submodules"
+
+verbose "Checking submodules"
+if [ ! -s "$workdir/submodules" ]; then
+	message "no submodules found for this repository."
+	exit 0
+fi
+
+init()
+{
+	local branch name path
+
+	git remote > "$workdir/remotes"
+	while read name; do
+		while read remote; do
+			[ "$name" != "$remote" ] ||
+				fatal "$remote: remote already exists."
+		done < "$workdir/remotes"
+	done < "$workdir/submodules"
+
+	branch="$(git describe --all HEAD)"
+	message "Using '$branch' to import submodules"
+
+	while read name; do
+		message "Converting '$name'"
+		url="$(git config --get "submodule.$name.url")" ||
+			fatal "$name: url not found"
+
+		submodule_remotes="$submodule_remotes $name"
+		git remote add -f "$name" "$url"
+
+		find "$name" \
+			-mindepth 1 \
+			-maxdepth 1 \
+			-execdir rm $verbose -rf -- '{}' '+'
+
+		git merge -q -s ours --no-commit "$name/master"
+		git read-tree --prefix="$name" -u "$name/master"
+
+		git commit -m "Merge '$name' submodule as our subdirectory"
+	done < "$workdir/submodules"
+}
+
+update()
+{
+	local name
+
+	while read name; do
+		git remote $verbose update "$name"
+		git merge -s subtree "$name/master"
+	done < "$workdir/submodules"
+}
+
+$action
