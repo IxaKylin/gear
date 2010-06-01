@@ -1,6 +1,6 @@
 .\" Copyright (C) 2010  Alexey Gladkov <legion@altlinux.org>
 .\"
-.\" Additional documentation for the gear-rpm command.
+.\" Additional documentation for the gear-submodule command.
 .\"
 .\" This file is free software; you can redistribute it and/or modify
 .\" it under the terms of the GNU General Public License as published by
@@ -17,16 +17,17 @@
 .\" Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 
 [NAME]
-gear\-submodule \- import submodules to brunches
+gear\-submodule \- import submodules as subtrees
 
 [DESCRIPTION]
 
-The utility merge a submodules as a subtrees at the current branch.
-This ensures that all required objects in a single repository.
-However, other brunches in the repository can work with the submodules
-as before.
+The
+.B gear\-submodule
+utility merges all submodules as subtrees of the current branch.
+This ensures that all required objects belong to the branch's ancestry.
+Other branches in the repository can work with submodules as before.
 
 [SEE ALSO]
 .BR gear (1),
 .BR git-submodule (1),
-.BR git-remote (1)
+.BR git-remote (1).

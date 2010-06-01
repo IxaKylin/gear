@@ -40,20 +40,17 @@ print_version()
 
 submodule_remotes=
 workdir=
-exit_handler()
+cleanup_handler()
 {
-	local rc=$?
-	if [ "$rc" != 0 ]; then
+	if [ "${1-}" != 0 ]; then
 		for s in $submodule_remotes; do
 			git remote rm "$s"
 		done
-		git reset --hard HEAD
+		[ -z "$submodule_remotes" ] ||
+			git reset --hard HEAD
 	fi
 	[ ! -d "$workdir" ] ||
 		rm -rf -- "$workdir"
-
-	[ "$rc" == 0 ] ||
-		exit 1
 }
 
 TEMP=`getopt -n $PROG -o "f,h,v,V" -l "force,help,verbose,version" -- "$@"` ||
@@ -81,14 +78,16 @@ while :; do
 done
 
 [ "$#" -gt 0 ] ||
-	show_usage "More arguments required"
+	show_usage 'Not enough arguments.'
+[ "$#" -eq 1 ] ||
+        show_usage 'Too many arguments.'
 
 case "$1" in
 	init|update)
 		action="$1"; shift
 		;;
 	*)
-		show_usage "Unrecognized argument: $1"
+		show_usage "Unrecognized action: $1"
 		;;
 esac
 
@@ -98,30 +97,30 @@ chdir_to_toplevel
 if [ -z "$force" ]; then
 	out="$(git diff-index --cached --name-only HEAD)"
 	[ -z "$out" ] ||
-		fatal "Changed files found in the index."
+		fatal 'Changed files found in the index.'
 
 	out="$(git diff --name-only &&
 	       git ls-files --directory --others --exclude-per-directory=.gitignore)"
 	[ -z "$out" ] ||
-		fatal "Untracked or modified files found."
+		fatal 'Untracked or modified files found.'
 fi
 
-trap exit_handler EXIT QUIT HUP INT TERM
+install_cleanup_handler cleanup_handler
 workdir="$(mktemp -dt "$PROG.XXXXXXXXX")"
 
-git cat-file -p HEAD:.gitmodules |
-	sed -n -e 's/\[submodule "\(.*\)"\]/\1/p' > "$workdir/submodules"
+git cat-file blob HEAD:.gitmodules |
+	sed -n 's/\[submodule "\([^"]\+\)"\].*/\1/p' > "$workdir/submodules"
 
-verbose "Checking submodules"
-if [ ! -s "$workdir/submodules" ]; then
-	message "no submodules found for this repository."
-	exit 0
-fi
+[ -s "$workdir/submodules" ] ||
+	fatal 'No submodules found in this repository.'
 
 init()
 {
-	local branch name path
+	local branch name sha1 module_sha1
 
+	git submodule init
+
+	# Ensure that no remotes for submodules have been set up already.
 	git remote > "$workdir/remotes"
 	while read name; do
 		while read remote; do
@@ -130,26 +129,31 @@ init()
 		done < "$workdir/remotes"
 	done < "$workdir/submodules"
 
-	branch="$(git describe --all HEAD)"
+	branch="$(git symbolic-ref HEAD)"
 	message "Using '$branch' to import submodules"
 
 	while read name; do
-		message "Converting '$name'"
 		url="$(git config --get "submodule.$name.url")" ||
 			fatal "$name: url not found"
+		sha1="$(git submodule status -- "$name")" ||
+			fatal "$name: submodule commit not found"
 
+		message "Importing '$name' submodule from '$url'"
 		submodule_remotes="$submodule_remotes $name"
 		git remote add -f "$name" "$url"
 
-		find "$name" \
-			-mindepth 1 \
-			-maxdepth 1 \
-			-execdir rm $verbose -rf -- '{}' '+'
+		sha1="${sha1#+}"
+		sha1="${sha1#-}"
+		sha1="${sha1%% *}"
+		module_sha1="$(get_commit_sha1 "$sha1")" ||
+		        fatal "Invalid submodule commit 'sha1'"
 
-		git merge -q -s ours --no-commit "$name/master"
-		git read-tree --prefix="$name" -u "$name/master"
+		rm -rf -- "$name"/
 
-		git commit -m "Merge '$name' submodule as our subdirectory"
+		git merge -q -s ours --no-commit "$module_sha1"
+		git read-tree --prefix="$name"/ -u "$module_sha1"
+
+		git commit -m "Merge '$name' submodule from '$url' as our subtree"
 	done < "$workdir/submodules"
 }
 
@@ -159,7 +163,7 @@ update()
 
 	while read name; do
 		git remote $verbose update "$name"
-		git merge -s subtree "$name/master"
+		git merge -s subtree "remotes/$name/master"
 	done < "$workdir/submodules"
 }
 
