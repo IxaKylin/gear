@@ -1,0 +1,277 @@
+#!/bin/sh -efu
+#
+# Copyright (C) 2021  Alexey Gladkov <legion@altlinux.org>
+#
+# This file is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+
+. gear-utils-sh-functions
+
+tmpdir=
+cleanup_handler()
+{
+	[ -z "$tmpdir" ] || rm -rf -- "$tmpdir"
+}
+
+print_version()
+{
+	cat <<EOF
+$PROG version $PROG_VERSION
+Written by Alexey Gladkov <legion@altlinux.org>
+
+Copyright (C) 2021  Alexey Gladkov <legion@altlinux.org>
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+EOF
+	exit
+}
+
+show_help()
+{
+	cat <<EOF
+Regular git-submodule cannot be used in gear since submodule objects are not in
+the object database. From the current object database, there is only a reference
+to a hash in another repository. Therefore, when cloning such a repository, not
+all necessary objects will be available.
+
+This utility allows you to save and restore the necessary objects as a bundle.
+The utility saves all submodules recursively.
+
+Usage: $PROG [options] [status]
+or:    $PROG [options] save
+or:    $PROG [options] restore
+
+Options:
+  -v, --verbose             print a message for each action;
+  -q, --quiet               do not print a message for each action;
+  -V, --version             print program version and exit;
+  -h, --help                show this text and exit.
+
+Report bugs to http://bugzilla.altlinux.org/
+
+EOF
+	exit
+}
+
+TEMP=`getopt -n "$PROG" -o $getopt_common_opts -l $getopt_common_longopts -- "$@"` ||
+	show_usage
+eval set -- "$TEMP"
+
+quiet=-q
+verbose=
+while :; do
+	case "$1" in
+		--) shift; break
+			;;
+		-q|--quiet) verbose='' quiet=-q
+			;;
+		-v|--verbose) verbose=v quiet=''
+			;;
+		-h|--help) show_help
+			;;
+		-V|--version) print_version
+			;;
+		*) fatal "Unrecognized option: $1"
+			;;
+	esac
+	shift
+done
+
+# Save git directory for future use.
+git_dir="$(git rev-parse --git-dir)"
+git_dir="$(readlink -ev -- "$git_dir")"
+
+# Change to toplevel directory.
+chdir_to_toplevel
+
+module_dir=".gear/submodules"
+
+mkdir -p -- "$module_dir"
+
+install_cleanup_handler cleanup_handler
+tmpdir="$(mktemp -d "$module_dir/$PROG.XXXXXXXX")"
+
+save_submodules()
+{
+	! git submodule status --recursive | grep -qs '^[+-]' ||
+		fatal "some submodules are not synchronized"
+
+	git submodule --quiet foreach --recursive 'echo $sha1 $displaypath' |
+	while read -r sm_hash sm_path; do
+		bundle="$(printf '%s' "$sm_path" | git hash-object --stdin)"
+
+		verbose "Bundling up submodule $sm_path ..."
+
+		sm_git_dir="$(git --git-dir="$sm_path/.git" rev-parse --git-dir)"
+
+		git --git-dir="$sm_git_dir" \
+			bundle create $quiet "$tmpdir/$bundle" HEAD
+
+		differ=
+		if [ ! -s "$module_dir/$bundle" ]; then
+			[ -n "$quiet" ] ||
+				message "Adding $sm_path ..."
+			differ=1
+		elif ! cmp -s -- "$tmpdir/$bundle" "$module_dir/$bundle"; then
+			[ -n "$quiet" ] ||
+				message "Updating $sm_path ..."
+			differ=1
+		else
+			[ -n "$quiet" ] ||
+				message "Skipping unchanged $sm_path ..."
+			rm -f -- "$tmpdir/$bundle"
+		fi
+
+		if [ -n "$differ" ]; then
+			mv -f -- "$tmpdir/$bundle" "$module_dir/$bundle"
+			git update-index --add -- "$module_dir/$bundle"
+			printf '%s %s\n' "$bundle" "$sm_path" >> "$tmpdir/differ"
+		fi
+
+		printf '%s %s %s %s\n' "$bundle" "$sm_hash" "$sm_path" "${sm_git_dir#$git_dir/}"
+	done > "$tmpdir/list"
+
+	if [ -s "$module_dir/list" ]; then
+		local cur_bundle cur_hash cur_path cur_git_dir
+		local new_bundle new_hash new_path new_git_dir
+
+		while read -r cur_bundle cur_hash cur_path cur_git_dir; do
+			while read -r new_bundle new_hash new_path new_git_dir; do
+				[ "$cur_bundle" != "$new_bundle" ] ||
+					continue 2
+			done < "$tmpdir/list"
+
+			[ -n "$quiet" ] ||
+				message "Removing $cur_path ..."
+
+			git rm $quiet -f -- "$module_dir/$cur_bundle"
+			printf '%s %s\n' "$cur_bundle" "$cur_path" >> "$tmpdir/differ"
+		done < "$module_dir/list"
+	fi
+
+	[ -s "$tmpdir/differ" ] ||
+		return 0
+
+	[ -n "$quiet" ] ||
+		message "Updating $module_dir/list ..."
+	mv -f -- "$tmpdir/list" "$module_dir/list"
+	git update-index --add -- "$module_dir/list"
+}
+
+restore_submodules()
+{
+	local bundle hash sm_path sm_git_dir
+
+	if [ ! -s "$module_dir/list" ]; then
+		[ -n "$quiet" ] ||
+			message "index file was not found and recovery is not possible"
+		return 0
+	fi
+
+	while read -r bundle sm_hash sm_path sm_git_dir; do
+		[ -n "$quiet" ] ||
+			message "Restoring objects for $sm_path ($bundle) ..."
+
+		if [ -d "$sm_git_dir" ]; then
+			git --git-dir="$git_dir/$sm_git_dir" fetch $quiet \
+				--no-recurse-submodules \
+				"$module_dir/$bundle" HEAD
+			git --git-dir="$git_dir/$sm_git_dir" update-ref \
+				HEAD "$sm_hash"
+		else
+			git clone $quiet \
+				--bare \
+				--no-remote-submodules \
+				-- "$module_dir/$bundle" "$git_dir/$sm_git_dir"
+			git --git-dir="$git_dir/$sm_git_dir" config \
+				core.bare false
+		fi
+	done < "$module_dir/list"
+
+	[ -n "$quiet" ] ||
+		message "Updating registered submodules ..."
+	git submodule update $quiet --init --recursive --no-fetch --checkout
+}
+
+status_submodules()
+{
+	local bundle hash path sm_hash sm_path dummy status
+
+	[ -s "$module_dir/list" ] ||
+		fatal "index file was not found: $module_dir/list"
+
+	! git submodule status --recursive | grep -qs '^[+-]' ||
+		fatal "some submodules are not synchronized"
+
+	git submodule --quiet foreach --recursive \
+		'echo `git rev-parse HEAD` $displaypath' > "$tmpdir/modules"
+
+	touch "$tmpdir/ok" "$tmpdir/new" "$tmpdir/modified"
+
+	while read -r sm_hash sm_path; do
+		status=
+		while read -r bundle hash path dummy; do
+			if [ "$path" = "$sm_path" ]; then
+				status='ok'
+				[ "$hash" = "$sm_hash" ] || status='modified'
+				break
+			fi
+		done < "$module_dir/list"
+
+		[ -n "$status" ] ||
+			status='new'
+
+		printf '%s\n' "$sm_path" >> "$tmpdir/$status"
+	done < "$tmpdir/modules"
+
+	while read -r bundle hash path dummy; do
+		while read -r sm_hash sm_path; do
+			[ "$path" != "$sm_path" ] ||
+				continue 2
+		done < "$tmpdir/modules"
+		printf '%s\n' "$path"
+	done < "$module_dir/list" > "$tmpdir/obsolete"
+
+	if [ "$(cat "$tmpdir/new" "$tmpdir/modified" "$tmpdir/obsolete" |wc -l)" = 0 ]; then
+		if [ -n "$verbose" ]; then
+			printf 'List of modules:\n'
+			sed -e 's/^/  ok: &/' "$tmpdir/ok"
+			printf '\n'
+		fi
+		printf 'All submodules are synchronized.\n'
+		return
+	fi
+
+	printf 'Submodules changes:\n'
+	sed -e 's/^/  new:      &/' "$tmpdir/new"
+	sed -e 's/^/  obsolete: &/' "$tmpdir/obsolete"
+	sed -e 's/^/  modified: &/' "$tmpdir/modified"
+	printf '\n'
+	printf 'Use "%s save" to sync the modules.\n' "$PROG"
+}
+
+case "${1-}" in
+	save)
+		save_submodules
+		;;
+	restore)
+		restore_submodules
+		;;
+	''|status)
+		status_submodules
+		;;
+	*)
+		fatal "unknown subcommand: $action"
+esac

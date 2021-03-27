@@ -42,6 +42,7 @@ PROGRAMS = \
 	gear-remote-rpm \
 	gear-rpm \
 	gear-srpmimport \
+	gear-store-submodules \
 	gear-store-tags \
 	gear-update \
 	#
