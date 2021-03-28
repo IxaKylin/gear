@@ -1,6 +1,6 @@
 #!/bin/sh -efu
 #
-# Copyright (C) 2006-2021  Dmitry V. Levin <ldv@altlinux.org>
+# Copyright (C) 2006-2022  Dmitry V. Levin <ldv@altlinux.org>
 # Copyright (C) 2006-2008  Alexey I. Froloff <raorn@altlinux.org>
 # Copyright (C) 2006-2021  Alexey Gladkov <legion@altlinux.org>
 # Copyright (C) 2006-2007  Sergey Vlasov <vsu@altlinux.org>
@@ -72,7 +72,7 @@ print_version()
 $PROG version $PROG_VERSION
 Written by Dmitry V. Levin <ldv@altlinux.org>
 
-Copyright (C) 2006-2021  Dmitry V. Levin <ldv@altlinux.org>
+Copyright (C) 2006-2022  Dmitry V. Levin <ldv@altlinux.org>
 Copyright (C) 2006-2008  Alexey I. Froloff <raorn@altlinux.org>
 Copyright (C) 2006-2021  Alexey Gladkov <legion@altlinux.org>
 Copyright (C) 2006-2007  Sergey Vlasov <vsu@altlinux.org>
@@ -328,6 +328,130 @@ write_git_archive()
 	verbose "Extracted archive: $tar_archive"
 }
 
+list_archive()
+{
+	local format="$1" && shift
+	local archive="$1" && shift
+
+	case "$format" in
+		tar)
+			tar -tf "$archive"
+			;;
+		zip)
+			zipinfo -1 -- "$archive"
+			;;
+		*)
+			rules_error "Unsupported format: $format"
+			;;
+	esac
+}
+
+append_archive()
+{
+	local format="$1" && shift
+	local archive="$1" && shift
+	local addon="$1" && shift
+
+	case "$format" in
+		tar)
+			tar -A -f "$archive" "$addon"
+			;;
+		zip)
+			zip "$addon" --copy --out "$archive"
+			;;
+		*)
+			rules_error "Unsupported format: $format"
+			;;
+	esac
+}
+
+append_submodule_bundles()
+{
+	local format="$1" && shift
+	local dir_name="$1" && shift
+	local tar_base="$1" && shift
+	local tar_archive="$1" && shift
+
+	local gs_dir='.gear/submodules'
+	local sm_list_file="$gs_dir/list"
+	local sm_work_list="$workdir/submodules_list"
+	[ -s "$sm_work_list" ] || {
+		if [ -n "$(git ls-tree "$main_tree_id" "$sm_list_file")" ]; then
+			cat_blob "$main_tree_id" "$sm_list_file" \
+				> "$sm_work_list"
+		fi
+	}
+	[ -s "$sm_work_list" ] ||
+		return 0
+
+	local sm_work_dir
+	sm_work_dir="$workdir/submodules"
+	mkdir -p -- "$sm_work_dir"
+
+	local lineno=0
+	local rules="$sm_list_file"
+	local bundle sm_hash sm_path dummy
+	while read -r bundle sm_hash sm_path dummy; do {
+		lineno=$(($lineno + 1))
+
+		is_hex_sha1 "$bundle" ||
+			rules_error "Invalid object id: $bundle"
+
+		if [ -z "${sm_path##.*}" ] ||
+		   [ -z "${sm_path##/*}" ]; then
+			rules_error "Invalid submodule path: $sm_path"
+		fi
+
+		local subdir
+		subdir="./$sm_path"
+
+		[ -z "${subdir##$dir_name/*}" ] || {
+			# This bundle does not apply to this archive.
+			continue
+		}
+
+		subdir="${tar_base:+$tar_base/}${subdir#$dir_name/}/"
+
+		# This listing has to be obtained every time inside
+		# the loop because the archive is being extended.
+		list_archive "$format" "$outdir/$tar_archive" \
+			> "$workdir/archive.list"
+
+		grep -Fxqse "$subdir" -- "$workdir/archive.list" || {
+			# This bundle does not apply to this archive.
+			continue
+		}
+
+		cat_blob "$main_tree_id" "$gs_dir/$bundle" \
+			> "$sm_work_dir/bundle"
+		(
+			unset GIT_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
+
+			export GIT_DIR="$sm_work_dir/git"
+			rm -rf -- "$GIT_DIR"
+
+			git clone --quiet --bare --no-remote-submodules \
+				-- "$sm_work_dir/bundle" "$GIT_DIR" ||
+				exit 1
+
+			git archive \
+				--format="$format" \
+				--prefix="$subdir" \
+				-- "$sm_hash" \
+				> "$sm_work_dir/archive" ||
+				exit 1
+
+			verbose "Extracted archive for submodule: $subdir"
+		) ||
+			rules_error "Failed to extract archive for submodule"
+
+		append_archive "$format" "$outdir/$tar_archive" \
+			"$sm_work_dir/archive"
+	} < /dev/null; done < "$sm_work_list"
+
+	rm -rf -- "$sm_work_dir"
+}
+
 make_archive()
 {
 	# format: "format $optional cmd dirname options.."
@@ -358,6 +482,8 @@ make_archive()
 
 	write_git_archive "$format" "$optional" "$archive_exclude" \
 		"$tar_tree" "$dir_name" "$tar_name" "$tar_base"
+
+	append_submodule_bundles "$format" "$dir_name" "$tar_base" "$tar_archive"
 
 	local output_name=
 	if [ "$tar_suffix" != '/' ]; then
