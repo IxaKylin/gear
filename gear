@@ -328,6 +328,43 @@ write_git_archive()
 	verbose "Extracted archive: $tar_archive"
 }
 
+list_archive()
+{
+	local format="$1" && shift
+	local archive="$1" && shift
+
+	case "$format" in
+		tar)
+			tar -tf "$archive"
+			;;
+		zip)
+			zipinfo -1 -- "$archive"
+			;;
+		*)
+			fatal "unsupported format: $format"
+			;;
+	esac
+}
+
+append_archive()
+{
+	local format="$1" && shift
+	local archive="$1" && shift
+	local addon="$1" && shift
+
+	case "$format" in
+		tar)
+			tar -A -f "$archive" "$addon"
+			;;
+		zip)
+			zip "$addon" --copy --out "$archive"
+			;;
+		*)
+			fatal "unsupported format: $format"
+			;;
+	esac
+}
+
 make_archive()
 {
 	# format: "format $optional cmd dirname options.."
@@ -358,6 +395,64 @@ make_archive()
 
 	write_git_archive "$format" "$optional" "$archive_exclude" \
 		"$tar_tree" "$dir_name" "$tar_name" "$tar_base"
+
+	if [ -n "$(git ls-tree "$main_tree_id" ".gear/submodules/list")" ] ; then
+		local sm_dir="$workdir/submodules"
+		mkdir -p -- "$sm_dir"
+
+		cat_blob "$main_tree_id" ".gear/submodules/list" >"$sm_dir/list"
+
+		local bundle sm_hash sm_path sm_git_dir subdir lineno=0
+
+		while read -r bundle sm_hash sm_path sm_git_dir; do
+			lineno=$(($lineno + 1))
+
+			if [ -z "${sm_path##.*}" ] || [ -z "${sm_path##/*}" ]; then
+				message ".gear/submodules/list:$lineno: unacceptable path for submodule"
+				continue
+			fi
+
+			subdir="./$sm_path"
+
+			[ -z "${subdir##$dir_name/*}" ] ||
+				continue
+
+			subdir="${tar_base:+$tar_base/}${subdir#$dir_name/}/"
+
+			# We have to do this in a loop because the archive will
+			# be extended and new directories will appear in the
+			# listing.
+			list_archive "$format" "$outdir/$tar_archive" > "$workdir/archive.list"
+
+			grep -qsFx "$subdir" -- "$workdir/archive.list" ||
+				continue
+
+			cat_blob "$main_tree_id" ".gear/submodules/$bundle" >"$sm_dir/bundle"
+			(
+				unset GIT_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
+
+				export GIT_DIR="$sm_dir/git"
+				rm -rf -- "$GIT_DIR"
+
+				git clone --quiet --bare --no-remote-submodules \
+					-- "$sm_dir/bundle" "$GIT_DIR" ||
+					exit 1
+
+				git archive \
+					--format="$format" \
+					--prefix="$subdir" \
+					"$sm_hash" >"$sm_dir/archive" ||
+					exit 1
+
+				verbose "Extracted archive for submodule: $subdir"
+			) ||
+				fatal "unable to create archive for submodule"
+
+			append_archive "$format" "$outdir/$tar_archive" "$sm_dir/archive"
+		done < "$sm_dir/list"
+
+		rm -rf -- "$sm_dir"
+	fi
 
 	local output_name=
 	if [ "$tar_suffix" != '/' ]; then
