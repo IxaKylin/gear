@@ -1,0 +1,243 @@
+#!/bin/sh -efu
+
+gear_store_submodules() # test entry point
+{
+	local i prev
+	local cwd="$PWD"
+
+	prev=
+	for i in 1 2 3 4; do
+		mkdir -p -- "remote/repo$i/.gear"
+		cd "remote/repo$i"
+		git init --quiet
+
+		:> "repo$i.file"
+		git add -f -- "repo$i.file"
+		git commit -q -m 'Initial commit'
+
+		printf >.gear/rules '%s\n' \
+			'tar.gz: .'
+		printf >"repo$i.spec" '%s\n' \
+			"Name: repo$i" \
+			"Version: 1.0" \
+			"Release: alt1"
+		git add -f -- .gear/rules "repo$i.spec"
+		git commit -q -m 'Add gear files'
+
+		if [ -n "$prev" ]; then
+			git submodule --quiet add -- "$cwd/remote/repo$prev" "external/repo$prev"
+			git commit -q -m "Add submodule repo$prev"
+		fi
+
+		cd - >/dev/null
+		prev="$i"
+	done
+
+	mv -- remote/repo4 ./
+
+	cd repo4
+	git submodule --quiet update --init --recursive
+	gear-store-submodules save -q
+	git commit -q -m "Store submodules"
+	cd - >/dev/null
+
+	# From this point on, the submodule is not available.
+	rm -rf -- remote
+
+	git pull -q -f repo4 master:master
+	finalize_repo
+
+	# The original repository is removed.
+	rm -rf -- repo4
+
+	$GEAR "$GEAR_OUT"
+
+	check_pkgtar_list "repo4.spec
+./
+./repo4.spec
+./repo4-1.0.tar.gz"
+
+	unpack_pkgtar_to .out
+	check_archive_list .out/repo4-1.0.tar.gz "repo4-1.0/
+repo4-1.0/.gear/
+repo4-1.0/.gear/rules
+repo4-1.0/.gear/submodules/
+repo4-1.0/.gear/submodules/00105ac88fcceb15305222c2c95213aeff91b8d0
+repo4-1.0/.gear/submodules/55665721694662b7dde9f1ba0edd854ea090bb89
+repo4-1.0/.gear/submodules/60d8665bd569c754b517876e76d147ee024ee811
+repo4-1.0/.gear/submodules/list
+repo4-1.0/.gitmodules
+repo4-1.0/external/
+repo4-1.0/external/repo3/
+repo4-1.0/repo4.file
+repo4-1.0/repo4.spec
+repo4-1.0/external/repo3/
+repo4-1.0/external/repo3/.gear/
+repo4-1.0/external/repo3/.gear/rules
+repo4-1.0/external/repo3/.gitmodules
+repo4-1.0/external/repo3/external/
+repo4-1.0/external/repo3/external/repo2/
+repo4-1.0/external/repo3/repo3.file
+repo4-1.0/external/repo3/repo3.spec
+repo4-1.0/external/repo3/external/repo2/
+repo4-1.0/external/repo3/external/repo2/.gear/
+repo4-1.0/external/repo3/external/repo2/.gear/rules
+repo4-1.0/external/repo3/external/repo2/.gitmodules
+repo4-1.0/external/repo3/external/repo2/external/
+repo4-1.0/external/repo3/external/repo2/external/repo1/
+repo4-1.0/external/repo3/external/repo2/repo2.file
+repo4-1.0/external/repo3/external/repo2/repo2.spec
+repo4-1.0/external/repo3/external/repo2/external/repo1/
+repo4-1.0/external/repo3/external/repo2/external/repo1/.gear/
+repo4-1.0/external/repo3/external/repo2/external/repo1/.gear/rules
+repo4-1.0/external/repo3/external/repo2/external/repo1/repo1.file
+repo4-1.0/external/repo3/external/repo2/external/repo1/repo1.spec"
+	rm -rf -- "$workdir"
+}
+
+gear_store_submodules_exclude() # test entry point
+{
+	local i prev
+	local cwd="$PWD"
+
+	prev=
+	for i in 1 2 3 4; do
+		mkdir -p -- "remote/repo$i/.gear"
+		cd "remote/repo$i"
+		git init --quiet
+
+		:> "repo$i.file"
+		git add -f -- "repo$i.file"
+		git commit -q -m 'Initial commit'
+
+		printf >.gear/rules '%s\n' \
+			'tar.gz: . exclude=external/'
+		printf >"repo$i.spec" '%s\n' \
+			"Name: repo$i" \
+			"Version: 1.0" \
+			"Release: alt1"
+		git add -f -- .gear/rules "repo$i.spec"
+		git commit -q -m 'Add gear files'
+
+		if [ -n "$prev" ]; then
+			git submodule --quiet add -- "$cwd/remote/repo$prev" "external/repo$prev"
+			git commit -q -m "Add submodule repo$prev"
+		fi
+
+		cd - >/dev/null
+		prev="$i"
+	done
+
+	mv -- remote/repo4 ./
+
+	cd repo4
+	git submodule --quiet update --init --recursive
+	gear-store-submodules save -q
+	git commit -q -m "Store submodules"
+	cd - >/dev/null
+
+	# From this point on, the submodule is not available.
+	rm -rf -- remote
+
+	git pull -q -f repo4 master:master
+	finalize_repo
+
+	# The original repository is removed.
+	rm -rf -- repo4
+
+	$GEAR "$GEAR_OUT"
+
+	check_pkgtar_list "repo4.spec
+./
+./repo4.spec
+./repo4-1.0.tar.gz"
+
+	unpack_pkgtar_to .out
+	check_archive_list .out/repo4-1.0.tar.gz "repo4-1.0/
+repo4-1.0/.gear/
+repo4-1.0/.gear/rules
+repo4-1.0/.gear/submodules/
+repo4-1.0/.gear/submodules/00105ac88fcceb15305222c2c95213aeff91b8d0
+repo4-1.0/.gear/submodules/55665721694662b7dde9f1ba0edd854ea090bb89
+repo4-1.0/.gear/submodules/60d8665bd569c754b517876e76d147ee024ee811
+repo4-1.0/.gear/submodules/list
+repo4-1.0/.gitmodules
+repo4-1.0/repo4.file
+repo4-1.0/repo4.spec"
+	rm -rf -- "$workdir"
+}
+
+gear_store_submodules_subdir() # test entry point
+{
+	local i prev
+	local cwd="$PWD"
+
+	prev=
+	for i in 1 2 3 4; do
+		mkdir -p -- "remote/repo$i/.gear"
+		cd "remote/repo$i"
+		git init --quiet
+
+		:> "repo$i.file"
+		git add -f -- "repo$i.file"
+		git commit -q -m 'Initial commit'
+
+		printf >.gear/rules '%s\n' \
+			'tar.gz: .'
+		printf >"repo$i.spec" '%s\n' \
+			"Name: repo$i" \
+			"Version: 1.0" \
+			"Release: alt1"
+		git add -f -- .gear/rules "repo$i.spec"
+		git commit -q -m 'Add gear files'
+
+		if [ -n "$prev" ]; then
+			git submodule --quiet add -- "$cwd/remote/repo$prev" "external/repo$prev"
+			git commit -q -m "Add submodule repo$prev"
+		fi
+
+		cd - >/dev/null
+		prev="$i"
+	done
+
+	mv -- remote/repo4 ./
+
+	cd repo4
+
+	mkdir -p data
+	echo abc >data/file
+	git add -f -- data/file
+	git commit -q -m 'Add data files'
+
+	printf >.gear/rules '%s\n' \
+		'tar.gz: data/'
+	git add -f -- .gear/rules
+	git commit -q -m 'Update gear rules'
+
+	git submodule --quiet update --init --recursive
+	gear-store-submodules save -q
+	git commit -q -m "Store submodules"
+	cd - >/dev/null
+
+	# From this point on, the submodule is not available.
+	rm -rf -- remote
+
+	git pull -q -f repo4 master:master
+	finalize_repo
+
+	# The original repository is removed.
+	rm -rf -- repo4
+
+	$GEAR "$GEAR_OUT"
+
+	check_pkgtar_list "repo4.spec
+./
+./repo4.spec
+./repo4-1.0.tar.gz"
+
+	unpack_pkgtar_to .out
+	check_archive_list .out/repo4-1.0.tar.gz "repo4-1.0/
+repo4-1.0/file"
+	rm -rf -- "$workdir"
+}
+
