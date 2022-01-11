@@ -447,6 +447,8 @@ append_submodule_bundles()
 
 		append_archive "$format" "$outdir/$tar_archive" \
 			"$sm_work_dir/archive"
+
+		echo "$lineno" >> "$workdir/appended_bundles"
 	} < /dev/null; done < "$sm_work_list"
 
 	rm -rf -- "$sm_work_dir"
@@ -483,7 +485,8 @@ make_archive()
 	write_git_archive "$format" "$optional" "$archive_exclude" \
 		"$tar_tree" "$dir_name" "$tar_name" "$tar_base"
 
-	append_submodule_bundles "$format" "$dir_name" "$tar_base" "$tar_archive"
+	append_submodule_bundles \
+		"$format" "$dir_name" "$tar_base" "$tar_archive"
 
 	local output_name=
 	if [ "$tar_suffix" != '/' ]; then
@@ -721,6 +724,28 @@ make_compress()
 	done
 }
 
+check_unused_submodule_bundles()
+{
+	[ -s "$workdir/submodules_list" ] ||
+		return 0
+
+	local lineno=0
+	local rules='.gear/submodules/list'
+	local unused=
+	local dummy sm_path
+	while read -r dummy dummy sm_path dummy; do
+		lineno=$(($lineno + 1))
+		grep -Fxqse "$lineno" "$workdir/appended_bundles" || {
+			rules_info "unused bundle: $sm_path"
+			unused=1
+		}
+	done < "$workdir/submodules_list"
+	if [ -n "$unused" ] &&
+	   [ "$(git config --get --bool 'gear.submodules.allow-unused')" != 'true' ]; then
+		exit 1
+	fi
+}
+
 parse_rules()
 {
 	[ -s "$workdir/rules" ] || return 0
@@ -795,6 +820,8 @@ parse_rules()
 		esac
 	done <"$workdir/rules"
 	lineno=
+
+	check_unused_submodule_bundles
 }
 
 TEMP=`getopt -n $PROG -o "$gear_short_options" -l "$gear_long_options" -- "$@"` ||

@@ -152,6 +152,7 @@ gear_store_submodules_exclude() # test entry point
 	# The original repository is removed.
 	rm -rf -- repo4
 
+	git config --bool 'gear.submodules.allow-unused' 'true'
 	$GEAR "$GEAR_OUT"
 
 	check_pkgtar_list "repo4.spec
@@ -235,6 +236,7 @@ gear_store_submodules_subdir() # test entry point
 	# The original repository is removed.
 	rm -rf -- repo4
 
+	git config --bool 'gear.submodules.allow-unused' 'true'
 	$GEAR "$GEAR_OUT"
 
 	check_pkgtar_list "repo4.spec
